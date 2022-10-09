@@ -51,7 +51,7 @@ info_file_path = 'cosmos_assistant.txt'
 tts_wav = 'cosmos_tts.wav'
 version = '0.2.0'
 
-# list of different greetings
+# list of different greetings GG
 greeting = ('How may I be of assistance.', 'How may I help.', 'How may I serve you today.')
 
 # {trigger : (function to open file, path)}
