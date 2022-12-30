@@ -18,6 +18,8 @@ from tkinter.filedialog import askopenfilename
 import threading
 from pygame import mixer
 import pygame.gfxdraw
+from vosk import Model, KaldiRecognizer
+
 try:
     hasInternet = True
     import pywhatkit
@@ -150,12 +152,26 @@ def play_tune(is_end=True):
 
 def listen_in(func=None):
     """makes cosmos listen in the background"""
-    global mic, listener, stop_listening
-    mic = sr.Microphone()
-    listener = sr.Recognizer()
-    with mic as source:
-        listener.adjust_for_ambient_noise(source, duration=ambience)
-    stop_listening = listener.listen_in_background(mic, take_command if not func else func, phrase_time_limit=10)
+    print("IN LISTNE INT :))))")
+    global vosk_model, vosk_mic, vosk_data, vosk_recognizer, vosk_stream
+    vosk_model = Model(r'vosk-model-small-en-in-0.4')
+    vosk_recognizer = KaldiRecognizer(vosk_model, 44100)
+
+    vosk_mic = pyaudio.PyAudio()
+    vosk_stream = vosk_mic.open(format=pyaudio.paInt16, channels=1, rate=44100, input=True, frames_per_buffer=8192, output=True)
+    vosk_stream.start_stream()
+
+    while(True):
+        vosk_data = vosk_stream.read(4096)
+
+        if vosk_recognizer.AcceptWaveform(vosk_data):
+            print("VOSK IF CONDITION SATISFIED")
+            vosk_command  = vosk_recognizer.Result()
+            vosk_command = vosk_command[14:-3]
+            print(vosk_command)
+            # print(vosk_recognizer.Result())
+            take_command(vosk_command)
+
 
 
 def replace_all(text, *values, new_value="", isword=True):
@@ -188,12 +204,12 @@ def talk(text, with_tune=True):
     can_talk = not bool(talking)
     computer.save_to_file(text, tts_wav)
     talking = True
-    stop_listening(wait_for_stop=False)
+    # stop_listening(wait_for_stop=False)
     for txt in text.split('\n'):  # gives a pause at a new line
         computer.say(talking := txt)
         if can_talk:
             computer.runAndWait()
-    listen_in()
+    # listen_in() /////////////////////////////////////////////////////////////
     talking = ''
     if with_tune:
         play_tune()
@@ -238,7 +254,7 @@ def visualize():
     audio_stream = audio_instance.open(format=pyaudio.paInt16,
                                        channels=1, rate=44100,
                                        input=True, output=True,
-                                       frames_per_buffer=(chunk := 1024*2))  # samples per frame
+                                       frames_per_buffer=(chunk := 1024*2))  # samples per frame         
     while running:
         data_int = [i - 128 for i in struct.unpack(f'{2 * chunk}B', audio_stream.read(chunk))]
         spec = np.abs((np.fft.fft(data_int))[:chunk]) / (chunk / 2)  # length = 2048
@@ -272,10 +288,10 @@ def visualize():
 
 def startup():
     """runs the program"""
-    global running, assistant, user, aliases, voice_type
+    global running, assistant, user, aliases, voice_type,vosk_model,vosk_recognizer, vosk_mic, vosk_stream
     running = True
     must_update = False
-    listen_in()
+    threading.Thread(target=listen_in).start()
 
     if os.path.exists(info_file_path):
         with open(info_file_path) as info_file:
@@ -296,8 +312,7 @@ def startup():
     else:
         update()
     threading.Thread(target=welcome).start()
-    audio_thread = threading.Thread(target=visualize)
-    audio_thread.start()
+    # audio_thread = threading.Thread(target=visualize).start()
     gui_startup()
 
     talk(f'Good Bye {user}', with_tune=False)
@@ -416,24 +431,26 @@ def gui_startup():
         clock.tick(fps)
 
 
-def take_command(recognizer, voice):
+def take_command(command):
     """returns a command from the user"""
     global running, debug_mode, user, assistant, check_for, ambience, dLay
-    try:
-        time1 = time.time()
-        command = recognizer.recognize_google(voice, language='en-gb').lower()
-        ambience = min(4.0, max(2.6, ambience + ((dLay := time.time() - time1) - 3) * 0.1))
-        debug(command := replace_all(command, *aliases, new_value=assistant), f'\nTime taken: {dLay} seconds')
-    except LookupError:
-        return talk("Could not understand the audio")
-    except sr.WaitTimeoutError:
-        return debug(sr.WaitTimeoutError)
-    except sr.UnknownValueError:
-        return
-    except sr.RequestError:
-        return debug(sr.RequestError, talk('I can not understand you as there is no Internet Connection'))
-    except Exception as e:
-        return debug(e, "ERROR")
+    # try:
+    #     time1 = time.time()
+    #     # command = recognizer.recognize_google(voice, language='en-gb').lower()
+    #     # command = recognizer.Result()
+    #     # command = command[14:-3]
+    #     ambience = min(4.0, max(2.6, ambience + ((dLay := time.time() - time1) - 3) * 0.1))
+    #     debug(command := replace_all(command, *aliases, new_value=assistant), f'\nTime taken: {dLay} seconds')
+    # except LookupError:
+    #     return talk("Could not understand the audio")
+    # except sr.WaitTimeoutError:
+    #     return debug(sr.WaitTimeoutError)
+    # except sr.UnknownValueError:
+    #     return
+    # except sr.RequestError:
+    #     return debug(sr.RequestError, talk('I can not understand you as there is no Internet Connection'))
+    # except Exception as e:
+    #     return debug(e, "ERROR")
 
     if check_for:
         command_update = replace_all(command, assistant, 'your', 'my', 'name', 'is').strip().lower()
@@ -618,6 +635,7 @@ def run_computer(command):
     # checks if cosmos is called with an invalid command
     elif running:
         talk(f'{command} is an invalid command')
+    
 
 
 if __name__ == '__main__':
