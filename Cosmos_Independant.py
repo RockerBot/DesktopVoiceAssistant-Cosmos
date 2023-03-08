@@ -104,6 +104,10 @@ operators = {
     'a': '1', 'plus': '+', '+': '+', 'and': '+', 'minus': '-', '-': '-', 'into': '*', 'x': '*', '*': '*', 'times': '*',
     'by': '/', '/': '/', 'mod': '%', 'percent': '*0.01', 'power': '**', 'square': '**2', 'cube': '**3',
     'dot': '.', 'point': '.', '.': '.', 'hole': ')', 'root': '**(-1)', 'of': '*',
+    'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9',
+    'ten': '10', 'eleven': '11', 'twelve': '12', 'thirteen': '13', 'fourteen': '14', 'fifteen': '15', 'sixteen': '16',
+    'seventeen': '17', 'eighteen': '18', 'nineteen': '19', 'twenty': '20', 'thirty': '30', 'fourty': '40', 'fifty': '50',
+    'sixty': '60', 'seventy': '70', 'eighty': '80', 'ninety': '90',
     'hundred': '0' * 2, 'thousand': '0' * 3, 'lakhs': '0' * 5, 'lakh': '0' * 5, 'lacs': '0' * 5, 'lac': '0' * 5,
     'crores': '0' * 7, 'crore': '0' * 7, 'million': '0' * 6, 'billion': '0' * 9, 'trillion': '0' * 12,
     'quadrillion': '0' * 15, 'quintillion': '0' * 18, 'sextillion': '0' * 21, 'septillion': '0' * 24,
@@ -175,7 +179,6 @@ def listen_in(func=None):
                 # print(vosk_recognizer.Result())
                 cosmos_listening = False
                 take_command(vosk_command)
-
 
 
 def replace_all(text, *values, new_value="", isword=True):
@@ -292,7 +295,7 @@ def visualize():
 
 def startup():
     """runs the program"""
-    global running, assistant, user, aliases, voice_type,vosk_model,vosk_recognizer, vosk_mic, vosk_stream
+    global running, assistant, user, aliases, voice_type,  vosk_model, vosk_recognizer, vosk_mic, vosk_stream
     running = True
     must_update = False
     threading.Thread(target=listen_in).start()
