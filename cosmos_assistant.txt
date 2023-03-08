@@ -1,7 +1,7 @@
 version:0.2.0
-assistant:computer
+assistant:cosmos
 user:user
 alias:kosmos,cosmo's
-voice:f
+voice:m
 
 minecraft:C:/Users/vpaul/Desktop/IoT Day1.pdf

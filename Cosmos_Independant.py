@@ -28,6 +28,7 @@ except Exception as ee:
         not str(ee) == 'Error while connecting to the Internet. Make sure you are connected to the Internet!'
     )
 
+
 computer = pyttsx3.init()
 tts_voice = computer.getProperty('voices')
 mixer.init()
@@ -44,6 +45,7 @@ talking = ''
 listener = None
 mic = None
 stop_listening = None
+cosmos_listening = True #NEW
 freq_lines = []
 dLay = 0
 ambience = 2.6
@@ -153,24 +155,26 @@ def play_tune(is_end=True):
 def listen_in(func=None):
     """makes cosmos listen in the background"""
     print("IN LISTNE INT :))))")
-    global vosk_model, vosk_mic, vosk_data, vosk_recognizer, vosk_stream
+    global vosk_model, vosk_mic, vosk_data, vosk_recognizer, vosk_stream, cosmos_listening
     vosk_model = Model(r'vosk-model-small-en-in-0.4')
     vosk_recognizer = KaldiRecognizer(vosk_model, 44100)
 
     vosk_mic = pyaudio.PyAudio()
     vosk_stream = vosk_mic.open(format=pyaudio.paInt16, channels=1, rate=44100, input=True, frames_per_buffer=8192, output=True)
     vosk_stream.start_stream()
-
+    cosmos_listening = True
     while(True):
-        vosk_data = vosk_stream.read(4096)
-
-        if vosk_recognizer.AcceptWaveform(vosk_data):
-            print("VOSK IF CONDITION SATISFIED")
-            vosk_command  = vosk_recognizer.Result()
-            vosk_command = vosk_command[14:-3]
-            print(vosk_command)
-            # print(vosk_recognizer.Result())
-            take_command(vosk_command)
+        vosk_command = None
+        if(cosmos_listening):
+            vosk_data = vosk_stream.read(4096)
+            if vosk_recognizer.AcceptWaveform(vosk_data):
+                print("VOSK IF CONDITION SATISFIED")
+                vosk_command  = vosk_recognizer.Result()
+                vosk_command = vosk_command[14:-3]
+                print(vosk_command)
+                # print(vosk_recognizer.Result())
+                cosmos_listening = False
+                take_command(vosk_command)
 
 
 
@@ -433,7 +437,7 @@ def gui_startup():
 
 def take_command(command):
     """returns a command from the user"""
-    global running, debug_mode, user, assistant, check_for, ambience, dLay
+    global running, debug_mode, user, assistant, check_for, ambience, dLay, cosmos_listening
     # try:
     #     time1 = time.time()
     #     # command = recognizer.recognize_google(voice, language='en-gb').lower()
@@ -463,25 +467,33 @@ def take_command(command):
                 else:
                     assistant = check_for[4:]
         check_for = None
+        cosmos_listening = True
         return
     elif assistant not in command or (command := command.replace(assistant, '').lower().strip()) == '':
+        cosmos_listening = True
         return
     play_tune(is_end=False)
     if has(command, 'debug'):
         debug_mode = not debug_mode
+        cosmos_listening = True
         return debug(talk(f'You are {"no longer" * (not debug_mode)} in Debug Mode'))
+
+    #---------DOUBT THAT THE BELOW PROGRAM WORKS :) ------------
     elif has(command, *"thank you_that is all_that's all_stop listening_chup_shut_terminate_quit_close".split('_'),
              isword=False):
         talk(("Happy to Help" if 'thank you' in command else "Okay") + f"\nTerminating {assistant}")
         stop_listening(wait_for_stop=False)
         running = False  # closes the program (Cosmos)
+        vosk_stream.stop_stream()
         return
+    #-----------------------------------------------------------
+
     run_computer(command)
 
 
 def run_computer(command):
     """operates certain functions depending on the users' command"""
-    global assistant, user, check_for, voice_type, noteing
+    global assistant, user, check_for, voice_type, noteing, cosmos_listening
 
     # checks if certain triggers are present in the command and gives an appropriate response
     bantered = False
@@ -491,6 +503,7 @@ def run_computer(command):
             command = replace_all(command, *value[0], isword=False)
             bantered = True
     if bantered:
+        cosmos_listening = True
         return talk('')
 
     # checks for a song to play
@@ -569,6 +582,7 @@ def run_computer(command):
         typ = [assistant, user]
         typ_name = ('your', 'my', 'assistant', 'user')
         if not has(command, *typ_name):
+            cosmos_listening = True
             return talk(f"I am sorry, I do not know whose name to change\n{info['name'].format(assistant)}")
         is_user = has(command, typ_name[1], typ_name[3])
         command = replace_all(command, 'change', 'name', 'to', *typ_name).strip()
@@ -586,7 +600,7 @@ def run_computer(command):
         os.remove(info_file_path)
         os.rename(f'{info_file_path[:-4]}_temp_delete.txt', info_file_path)
 
-    # changes Voice
+    # Changes Voice
     elif has(command, 'change', 'voice', check=all):
         typ = replace_all(replace_all(command, 'change', 'voice', 'your', 'to'),
                           'mail', 'male', new_value='m').replace('female', 'f')
@@ -635,6 +649,8 @@ def run_computer(command):
     # checks if cosmos is called with an invalid command
     elif running:
         talk(f'{command} is an invalid command')
+
+    cosmos_listening = True
     
 
 
